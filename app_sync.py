@@ -108,10 +108,35 @@ def scan():
                 'total_levels': 13
             })
         else:
+            # Get current level requirements for better feedback
+            level = engine.get_current_level()
+            req = level.get('requirement', {}) if level else {}
+            
+            # Build specific feedback message
+            feedback_parts = ['Item archived.']
+            
+            if req.get('any'):
+                feedback_parts.append('Calibration incomplete - scan again.')
+            elif req.get('randomized'):
+                feedback_parts.append('Does not match the required signature.')
+            else:
+                needs = []
+                if 'color' in req:
+                    needs.append(f"{req['color'].upper()} color")
+                if 'qr_contains' in req:
+                    needs.append(f"QR with '{req['qr_contains']}'")
+                if 'shape' in req:
+                    needs.append(f"{req['shape'].upper()} shape")
+                if 'barcode' in req:
+                    needs.append("barcode")
+                
+                if needs:
+                    feedback_parts.append(f"Lock remains engaged. Need: {', '.join(needs)}")
+            
             return jsonify({
                 'success': False,
                 'result': result_text,
-                'hint': 'Item saved to inventory. Puzzle not solved yet.'
+                'hint': ' '.join(feedback_parts)
             })
             
     except Exception as e:

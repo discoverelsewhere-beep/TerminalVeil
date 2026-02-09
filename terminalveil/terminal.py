@@ -32,25 +32,39 @@ class GameEngine:
         intro = level.get('intro', 'Unknown sector.')
         req = level.get('requirement', {})
         
-        desc = f"[SECTOR {self.state['current_level'] + 1}]\n{intro}\n\n"
+        # Build sector header with difficulty
+        diff = get_level_difficulty(self.state['current_level'])
+        diff_display = {
+            'tutorial': '[TRAINING]',
+            'easy': '',
+            'medium': '[MEDIUM]',
+            'hard': '[HARD]',
+            'very_hard': '[VERY HARD]',
+            'extreme': '[EXTREME]'
+        }.get(diff, '')
         
+        desc = f"[SECTOR {self.state['current_level'] + 1}] {diff_display}\n{intro}\n\n"
+        
+        # Show objectives clearly
+        objectives = []
         if 'color' in req:
-            desc += f"[OBJECTIVE] Locate and scan: {req['color'].upper()} chromatic signature\n"
+            objectives.append(f"[OBJECTIVE] Locate and scan: {req['color'].upper()} colored object")
         if 'qr_contains' in req:
-            desc += f"[OBJECTIVE] Decode QR containing: '{req['qr_contains']}'\n"
+            objectives.append(f"[OBJECTIVE] Decode QR containing: '{req['qr_contains']}'")
         if 'shape' in req:
-            desc += f"[OBJECTIVE] Present geometric form: {req['shape'].upper()}\n"
+            objectives.append(f"[OBJECTIVE] Present geometric form: {req['shape'].upper()}")
         if 'barcode' in req:
-            desc += f"[OBJECTIVE] Scan any barcode\n"
+            objectives.append(f"[OBJECTIVE] Scan any barcode")
+        if req.get('any'):
+            objectives.append("[OBJECTIVE] Scan any object to calibrate")
+        if req.get('randomized'):
+            objectives.append("[OBJECTIVE] Scan to discover what the system seeks")
+        
+        if objectives:
+            desc += '\n'.join(objectives) + '\n'
         
         desc += f"\nInventory: {', '.join(self.state['inventory']) if self.state['inventory'] else '[empty]'}"
         return desc
-    
-    def cmd_lore(self):
-        level = self.get_current_level()
-        if level and 'lore' in level:
-            return f"[ARCHIVE ENTRY]\n{level['lore']}"
-        return "No archive data available for this sector."
     
     def process_command(self, cmd):
         parts = cmd.lower().strip().split()
@@ -96,7 +110,26 @@ class GameEngine:
         return f"Inventory: {', '.join(self.state['inventory'])}"
     
     def cmd_scan_hint(self):
-        return "Use SCAN button or type scan with parameters."
+        level = self.get_current_level()
+        if not level:
+            return "No active sector."
+        
+        req = level.get('requirement', {})
+        hints = []
+        
+        if req.get('any'):
+            hints.append("Scan any object to proceed.")
+        else:
+            if 'color' in req:
+                hints.append(f"Need: {req['color'].upper()} color")
+            if 'qr_contains' in req:
+                hints.append(f"Need: QR code with '{req['qr_contains']}'")
+            if 'shape' in req:
+                hints.append(f"Need: {req['shape'].upper()} shape")
+            if 'barcode' in req:
+                hints.append("Need: Any barcode")
+        
+        return "SCAN ready. " + " ".join(hints) if hints else "Use SCAN button or type scan with parameters."
     
     def cmd_use(self, args):
         if not args:
@@ -130,78 +163,128 @@ class GameEngine:
             return f"[HINT] {level['hint']}"
         return "No hints available."
     
+    def cmd_lore(self):
+        level = self.get_current_level()
+        if level and 'lore' in level:
+            return f"[ARCHIVE ENTRY]\n{level['lore']}"
+        return "No archive data available for this sector."
+    
     def cmd_status(self):
         lvl = self.state['current_level'] + 1
         total = len(LEVELS)
         difficulty = get_level_difficulty(self.state['current_level'])
         diff_display = {
             'tutorial': '[TRAINING]',
-            'easy': '[EASY]',
-            'medium': '[MEDIUM]', 
+            'easy': '',
+            'medium': '[MEDIUM]',
             'hard': '[HARD]',
             'very_hard': '[VERY HARD]',
             'extreme': '[EXTREME]'
-        }.get(difficulty, '[NORMAL]')
+        }.get(difficulty, '')
         return f"Sector {lvl}/{total} {diff_display} | Inventory: {len(self.state['inventory'])} items"
     
     def cmd_clear(self):
         return "__CLEAR__"
     
     def process_scan_result(self, result):
+        """Process what was detected and add to inventory"""
         text_parts = []
         
         if result.get('type') == 'qr':
             text_parts.append(f"QR Data: {result['data']}")
             self.state['inventory'].append(f"QR:{result['data']}")
         elif result.get('type') == 'color':
-            text_parts.append(f"Color: {result['color']}")
-            self.state['inventory'].append(f"Color:{result['color']}")
+            color = result.get('color', 'unknown')
+            text_parts.append(f"Color detected: {color.upper()}")
+            self.state['inventory'].append(f"Color:{color}")
         elif result.get('type') == 'shape':
-            text_parts.append(f"Shape: {result['shape']}")
-            self.state['inventory'].append(f"Shape:{result['shape']}")
+            shape = result.get('shape', 'unknown')
+            text_parts.append(f"Shape detected: {shape.upper()}")
+            self.state['inventory'].append(f"Shape:{shape}")
         elif result.get('type') == 'barcode':
             text_parts.append(f"Barcode: {result['data']}")
             self.state['inventory'].append(f"Barcode:{result['data']}")
         else:
-            text_parts.append("Unknown signature")
+            text_parts.append("Unknown or unclear signature")
         
+        # Remove duplicates from inventory
         self.state['inventory'] = list(set(self.state['inventory']))
         return " | ".join(text_parts)
     
     def check_puzzle_solution(self, result):
+        """
+        STRICT puzzle checking - must match EXACT requirements
+        Returns True only if scan result satisfies ALL requirements
+        """
         level = self.get_current_level()
         if not level:
             return False
         
         req = level.get('requirement', {})
+        result_type = result.get('type', 'unknown')
         
-        if 'color' in req and result.get('type') == 'color':
-            detected = result.get('color', '').lower()
-            required = req['color'].lower()
-            if required in detected or detected in required:
-                return True
+        # Level 0: Calibration - any scan works
+        if req.get('any'):
+            return result_type in ['color', 'shape', 'qr', 'barcode']
         
-        if 'qr_contains' in req and result.get('type') == 'qr':
-            if req['qr_contains'] in result.get('data', ''):
-                return True
-        
-        if 'shape' in req and result.get('type') == 'shape':
-            if result.get('shape', '').lower() == req['shape'].lower():
-                return True
-        
-        if 'barcode' in req and result.get('type') == 'barcode':
-            return True
-        
+        # Randomized levels (7 and 12)
         if req.get('randomized'):
             actual = level.get('actual_requirement', {})
-            if actual.get('type') == result.get('type'):
-                if result.get('color') == actual.get('value') or result.get('shape') == actual.get('value') or actual.get('value') in result.get('data', ''):
-                    return True
-        
-        if req.get('any'):
-            return True
+            if actual.get('type') != result_type:
+                return False
             
-        return False
+            if result_type == 'color':
+                return result.get('color') == actual.get('value')
+            elif result_type == 'shape':
+                return result.get('shape') == actual.get('value')
+            elif result_type == 'qr':
+                return actual.get('value') in result.get('data', '')
+            return False
+        
+        # For dual requirements (e.g., color + QR), we check if this scan
+        # contributes to completing the puzzle. Since we can only scan one thing
+        # at a time, we check if THIS scan matches ANY of the requirements.
+        # The player may need to scan multiple things across attempts.
+        
+        matched = False
+        
+        # Check color requirement
+        if 'color' in req:
+            if result_type != 'color':
+                return False  # Wrong type entirely
+            detected = result.get('color', '').lower()
+            required = req['color'].lower()
+            # Must be exact color match
+            if detected == required:
+                matched = True
+            else:
+                return False  # Found color but wrong one
+        
+        # Check QR requirement
+        if 'qr_contains' in req:
+            if result_type != 'qr':
+                return False  # Wrong type
+            if req['qr_contains'] not in result.get('data', ''):
+                return False  # QR found but wrong content
+            matched = True
+        
+        # Check shape requirement
+        if 'shape' in req:
+            if result_type != 'shape':
+                return False  # Wrong type
+            detected = result.get('shape', '').lower()
+            required = req['shape'].lower()
+            if detected != required:
+                return False  # Wrong shape
+            matched = True
+        
+        # Check barcode requirement
+        if 'barcode' in req:
+            if result_type != 'barcode':
+                return False  # Wrong type
+            matched = True
+        
+        return matched
     
     def advance_level(self):
         self.state['current_level'] += 1
@@ -209,10 +292,11 @@ class GameEngine:
         
         if self.state['current_level'] >= len(LEVELS):
             self.state['game_complete'] = True
-            return "[CRITICAL] Final sector accessed."
+            return "[CRITICAL] Final sector breached.\nThe Veil has been lifted.\nReality is code."
         
         level = self.get_current_level()
-        return f"[SECTOR {self.state['current_level']}] Access granted.\n{level.get('intro', '')}"
+        level_num = self.state['current_level'] + 1
+        return f"[SECTOR {level_num}] Access granted.\n{level.get('intro', '')}"
     
     def check_victory(self):
         return self.state['game_complete']
