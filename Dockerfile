@@ -23,8 +23,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Expose port
-EXPOSE 10000
+# Use sync version for stability
+ENV FLASK_APP=app_sync.py
 
-# Run with gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:10000", "--workers", "1", "--timeout", "120", "app:app"]
+# Run with gunicorn (Render provides PORT env var)
+CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 app_sync:app
