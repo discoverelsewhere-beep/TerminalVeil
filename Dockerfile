@@ -27,4 +27,4 @@ COPY . .
 ENV FLASK_APP=app_sync.py
 
 # Run with gunicorn (Render provides PORT env var)
-CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 app_sync:app
+CMD gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 300 --keep-alive 60 app_sync:app

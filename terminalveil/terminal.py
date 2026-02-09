@@ -195,14 +195,14 @@ class GameEngine:
             self.state['inventory'].append(f"QR:{result['data']}")
         elif result.get('type') == 'color':
             color = result.get('color', 'unknown')
-            text_parts.append(f"Color detected: {color.upper()}")
+            text_parts.append(f"Color signature: {color.upper()}")
             self.state['inventory'].append(f"Color:{color}")
         elif result.get('type') == 'shape':
             shape = result.get('shape', 'unknown')
-            text_parts.append(f"Shape detected: {shape.upper()}")
+            text_parts.append(f"Object analyzed: {shape.upper()} form detected")
             self.state['inventory'].append(f"Shape:{shape}")
         elif result.get('type') == 'barcode':
-            text_parts.append(f"Barcode: {result['data']}")
+            text_parts.append(f"Barcode Data: {result['data']}")
             self.state['inventory'].append(f"Barcode:{result['data']}")
         else:
             text_parts.append("Unknown or unclear signature")
