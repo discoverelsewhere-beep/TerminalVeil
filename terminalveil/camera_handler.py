@@ -49,6 +49,56 @@ class CameraAnalyzer:
         # Nothing found
         return {'type': 'unknown', 'raw': True}
     
+    def analyze_frame_simultaneous(self, frame, required_items):
+        """
+        Special mode for Level 11 - detect multiple things in one frame.
+        Returns success only if ALL required items are detected.
+        """
+        detected_items = {}
+        
+        # Check for barcode
+        if 'barcode' in required_items:
+            bc = self.scan_barcode(frame)
+            if bc:
+                detected_items['barcode'] = bc
+        
+        # Check for QR
+        if 'qr' in required_items:
+            qr = self.scan_qr(frame)
+            if qr:
+                detected_items['qr'] = qr
+        
+        # Check for color
+        if any(c in required_items for c in ['red', 'blue', 'green', 'yellow']):
+            color = self.detect_color(frame)
+            if color and color in required_items:
+                detected_items['color'] = color
+        
+        # Check for shape
+        if any(s in required_items for s in ['triangle', 'square', 'circle']):
+            shape = self.detect_shape(frame)
+            if shape and shape in required_items:
+                detected_items['shape'] = shape
+        
+        # For Level 11: need barcode + red
+        if 'barcode' in required_items and 'red' in required_items:
+            if 'barcode' in detected_items and detected_items.get('color') == 'red':
+                return {
+                    'type': 'simultaneous',
+                    'items': detected_items,
+                    'data': f"Barcode:{detected_items['barcode']},Color:red"
+                }
+        
+        # Return what we found (for feedback)
+        if detected_items:
+            return {
+                'type': 'partial',
+                'items': detected_items,
+                'found': list(detected_items.keys())
+            }
+        
+        return {'type': 'unknown', 'raw': True}
+    
     def scan_qr(self, image):
         """Scan for QR codes"""
         try:

@@ -375,6 +375,10 @@
                             }
                             updateStatus(data.level, null);
                         } else {
+                            // Show reset warning with special styling
+                            if (data.reset) {
+                                addLine('[⚠️ SEQUENCE RESET] Wrong step! Starting over from step 1.');
+                            }
                             addLine(data.hint || 'Lock remains engaged.');
                         }
                     }
@@ -416,7 +420,10 @@
                         }
                         updateStatus(data.level, null);
                     } else {
-                        addLine(data.hint || 'Item archived. Lock remains engaged.');
+                        if (data.reset) {
+                            addLine('[⚠️ SEQUENCE RESET] Wrong step! Starting over from step 1.');
+                        }
+                        addLine(data.hint || 'Lock remains engaged.');
                     }
                 }
             } catch (err) {

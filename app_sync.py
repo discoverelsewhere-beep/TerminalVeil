@@ -1,6 +1,5 @@
 """
-Terminal Veil - Web Edition (Sync version for Render)
-Works on iPhone, Android, and Desktop browsers
+Terminal Veil - Web Edition with Extreme Difficulty Support
 """
 from flask import Flask, render_template, request, jsonify
 import base64
@@ -10,47 +9,25 @@ from PIL import Image
 import io
 from datetime import datetime, timedelta
 
-# Import your existing game files
 from terminalveil.terminal import GameEngine
 from terminalveil.camera_handler import CameraAnalyzer
 
 app = Flask(__name__)
 
-# Store games for each player (simple version)
 games = {}
 analyzers = {}
-last_activity = {}  # Track last activity for session management
+last_activity = {}
 
 def get_or_create_session(session_id):
-    """Get existing session or create new one"""
     if session_id not in games:
         games[session_id] = GameEngine()
         analyzers[session_id] = CameraAnalyzer()
     last_activity[session_id] = datetime.now()
     return games[session_id], analyzers[session_id]
 
-def process_image(image_data, analyzer, mode='any'):
-    """Process image data and return analysis result"""
-    # Handle both base64 data URL and raw base64
-    if ',' in image_data:
-        image_data = image_data.split(',')[1]
-    
-    # Convert base64 to image
-    image_bytes = base64.b64decode(image_data)
-    image = Image.open(io.BytesIO(image_bytes))
-    
-    # Convert to format OpenCV likes
-    image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-    
-    # Analyze the image
-    return analyzer.analyze_frame(image, mode)
-
 @app.route('/')
 def index():
-    """Show the game page - create persistent session"""
-    # Get existing session or create new
     session_id = request.cookies.get('session_id')
-    
     if not session_id or session_id not in games:
         session_id = str(datetime.now().timestamp())
         games[session_id] = GameEngine()
@@ -59,27 +36,23 @@ def index():
     last_activity[session_id] = datetime.now()
     
     resp = app.make_response(render_template('index.html'))
-    # Set cookie to expire in 7 days and persist across browser sessions
     resp.set_cookie('session_id', session_id, max_age=604800, httponly=True, samesite='Lax')
     return resp
 
 @app.route('/command', methods=['POST'])
 def command():
-    """Handle typed commands"""
     session_id = request.cookies.get('session_id', 'default')
     engine, _ = get_or_create_session(session_id)
     
     data = request.json
     cmd = data.get('command', '')
     
-    # Handle scan command specially
     if cmd.lower().startswith('scan'):
         return jsonify({
             'type': 'scan_request',
             'mode': cmd.lower().replace('scan', '').strip() or 'any'
         })
     
-    # Process normal command
     response = engine.process_command(cmd)
     
     return jsonify({
@@ -90,12 +63,30 @@ def command():
         'victory': engine.check_victory()
     })
 
+def process_scan_common(engine, analyzer, image_data, mode='any'):
+    """Common scan processing for both camera and upload"""
+    if ',' in image_data:
+        image_data = image_data.split(',')[1]
+    
+    image_bytes = base64.b64decode(image_data)
+    image = Image.open(io.BytesIO(image_bytes))
+    image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    
+    # For simultaneous detection (Level 11), try to detect multiple things
+    level = engine.get_current_level()
+    req = level.get('requirement', {}) if level else {}
+    
+    if req.get('simultaneous'):
+        # Try to detect both required items
+        result = analyzer.analyze_frame_simultaneous(image, req['simultaneous'])
+    else:
+        result = analyzer.analyze_frame(image, mode)
+    
+    return result
+
 @app.route('/scan', methods=['POST'])
 def scan():
-    """Process camera image - auto-creates session if missing"""
     session_id = request.cookies.get('session_id', 'default')
-    
-    # Auto-create session if missing (instead of error)
     engine, analyzer = get_or_create_session(session_id)
     
     data = request.json
@@ -103,18 +94,15 @@ def scan():
     mode = data.get('mode', 'any')
     
     if not image_data:
-        return jsonify({'error': 'No image data received'})
+        return jsonify({'error': 'No image data'})
     
     try:
-        result = process_image(image_data, analyzer, mode)
+        result = process_scan_common(engine, analyzer, image_data, mode)
         
         if 'error' in result:
             return jsonify({'error': result['error']})
         
-        # Check if it solves the puzzle FIRST
         success = engine.check_puzzle_solution(result)
-        
-        # Only add to inventory on successful scans
         result_text = engine.process_scan_result(result, add_to_inventory=success)
         
         if success:
@@ -124,38 +112,51 @@ def scan():
                 'result': result_text,
                 'advance': advance_text,
                 'level': engine.state['current_level'] + 1,
-                'total_levels': 13
+                'total_levels': 13,
+                'reset': False
             })
         else:
-            # Get current level requirements for better feedback
             level = engine.get_current_level()
             req = level.get('requirement', {}) if level else {}
             
-            # Build specific feedback message - item NOT archived on failure
-            feedback_parts = ['Analysis complete.']
+            # Check if sequence was reset
+            was_reset = len(engine.state['scans_this_level']) == 0 and (
+                req.get('sequence') or req.get('complex_sequence')
+            ) and engine.state['attempts_count'].get(engine.state['current_level'], 0) > 0
             
-            if req.get('any'):
-                feedback_parts.append('Calibration incomplete - scan again.')
-            elif req.get('randomized'):
-                feedback_parts.append('Does not match the required signature.')
+            if was_reset:
+                feedback = "[RESET] Sequence broken! Starting over."
             else:
-                needs = []
-                if 'color' in req:
-                    needs.append(f"{req['color'].upper()} color")
-                if 'qr_contains' in req:
-                    needs.append(f"QR with '{req['qr_contains']}'")
-                if 'shape' in req:
-                    needs.append(f"{req['shape'].upper()} shape")
-                if 'barcode' in req:
-                    needs.append("barcode")
-                
-                if needs:
-                    feedback_parts.append(f"Lock remains engaged. Need: {', '.join(needs)}")
+                feedback = "Analysis complete. "
+                if req.get('sequence'):
+                    progress = engine.state['scans_this_level']
+                    target = req['sequence']
+                    feedback += f"Progress: {len(progress)}/{len(target)}"
+                elif req.get('complex_sequence'):
+                    progress = engine.state['scans_this_level']
+                    target = req['complex_sequence']
+                    feedback += f"Progress: {len(progress)}/{len(target)}"
+                elif req.get('simultaneous'):
+                    items = req['simultaneous']
+                    feedback += f"Need BOTH: {items[0].upper()} + {items[1].upper()} in ONE frame!"
+                else:
+                    needs = []
+                    if 'color' in req:
+                        needs.append(f"{req['color'].upper()} color")
+                    if 'qr_contains' in req:
+                        needs.append(f"QR '{req['qr_contains']}'")
+                    if 'shape' in req:
+                        needs.append(f"{req['shape'].upper()} shape")
+                    if 'barcode' in req:
+                        needs.append("barcode")
+                    if needs:
+                        feedback += f"Lock engaged. Need: {', '.join(needs)}"
             
             return jsonify({
                 'success': False,
                 'result': result_text,
-                'hint': ' '.join(feedback_parts)
+                'hint': feedback,
+                'reset': was_reset
             })
             
     except Exception as e:
@@ -163,14 +164,10 @@ def scan():
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    """Handle file upload for users who can't use camera"""
     session_id = request.cookies.get('session_id', 'default')
-    
-    # Auto-create session if missing
     engine, analyzer = get_or_create_session(session_id)
     
     try:
-        # Check if file was uploaded
         if 'file' not in request.files:
             return jsonify({'error': 'No file uploaded'})
         
@@ -180,20 +177,21 @@ def upload():
         if file.filename == '':
             return jsonify({'error': 'No file selected'})
         
-        # Read image from uploaded file
         image_bytes = file.read()
         image = Image.open(io.BytesIO(image_bytes))
-        
-        # Convert to OpenCV format
         image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
         
-        # Analyze
-        result = analyzer.analyze_frame(image, mode)
+        level = engine.get_current_level()
+        req = level.get('requirement', {}) if level else {}
+        
+        if req.get('simultaneous'):
+            result = analyzer.analyze_frame_simultaneous(image, req['simultaneous'])
+        else:
+            result = analyzer.analyze_frame(image, mode)
         
         if 'error' in result:
             return jsonify({'error': result['error']})
         
-        # Check puzzle solution first, then add to inventory only if successful
         success = engine.check_puzzle_solution(result)
         result_text = engine.process_scan_result(result, add_to_inventory=success)
         
@@ -210,28 +208,42 @@ def upload():
             level = engine.get_current_level()
             req = level.get('requirement', {}) if level else {}
             
-            feedback_parts = ['Analysis complete.']
-            if req.get('any'):
-                feedback_parts.append('Calibration incomplete - scan again.')
-            elif req.get('randomized'):
-                feedback_parts.append('Does not match the required signature.')
+            was_reset = len(engine.state['scans_this_level']) == 0 and (
+                req.get('sequence') or req.get('complex_sequence')
+            ) and engine.state['attempts_count'].get(engine.state['current_level'], 0) > 0
+            
+            if was_reset:
+                feedback = "[RESET] Sequence broken! Starting over."
             else:
-                needs = []
-                if 'color' in req:
-                    needs.append(f"{req['color'].upper()} color")
-                if 'qr_contains' in req:
-                    needs.append(f"QR with '{req['qr_contains']}'")
-                if 'shape' in req:
-                    needs.append(f"{req['shape'].upper()} shape")
-                if 'barcode' in req:
-                    needs.append("barcode")
-                if needs:
-                    feedback_parts.append(f"Lock remains engaged. Need: {', '.join(needs)}")
+                feedback = "Analysis complete."
+                if req.get('sequence'):
+                    progress = engine.state['scans_this_level']
+                    target = req['sequence']
+                    feedback += f" Progress: {len(progress)}/{len(target)}"
+                elif req.get('complex_sequence'):
+                    progress = engine.state['scans_this_level']
+                    target = req['complex_sequence']
+                    feedback += f" Progress: {len(progress)}/{len(target)}"
+                elif req.get('simultaneous'):
+                    items = req['simultaneous']
+                    feedback += f" Need BOTH: {items[0].upper()} + {items[1].upper()} in ONE frame!"
+                else:
+                    needs = []
+                    if 'color' in req:
+                        needs.append(f"{req['color'].upper()} color")
+                    if 'qr_contains' in req:
+                        needs.append(f"QR '{req['qr_contains']}'")
+                    if 'shape' in req:
+                        needs.append(f"{req['shape'].upper()} shape")
+                    if 'barcode' in req:
+                        needs.append("barcode")
+                    if needs:
+                        feedback += f" Lock engaged. Need: {', '.join(needs)}"
             
             return jsonify({
                 'success': False,
                 'result': result_text,
-                'hint': ' '.join(feedback_parts)
+                'hint': feedback
             })
             
     except Exception as e:
@@ -239,7 +251,6 @@ def upload():
 
 @app.route('/save', methods=['POST'])
 def save():
-    """Save game"""
     session_id = request.cookies.get('session_id', 'default')
     if session_id in games:
         success = games[session_id].save_manager.save(games[session_id].state)
@@ -248,7 +259,6 @@ def save():
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
         'active_sessions': len(games),
@@ -256,5 +266,4 @@ def health():
     })
 
 if __name__ == '__main__':
-    # Run on all network interfaces
     app.run(debug=True, host='0.0.0.0', port=10000)
