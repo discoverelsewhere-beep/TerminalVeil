@@ -5,6 +5,7 @@ Handles state, progression, inventory, and command parsing.
 import random
 from terminalveil.puzzles import LEVELS, get_level_difficulty, get_difficulty_display
 from terminalveil.save_manager import SaveManager
+from terminalveil.analytics import AnalyticsManager
 
 class GameEngine:
     def __init__(self, ui=None):
@@ -20,11 +21,15 @@ class GameEngine:
             'first_success': None  # Track first completion
         }
         self.save_manager = SaveManager()
+        self.analytics = AnalyticsManager()
         self.load_game()
         
         # Initialize attempt counter for current level
         if self.state['current_level'] not in self.state['attempts_count']:
             self.state['attempts_count'][self.state['current_level']] = 0
+        
+        # Record analytics
+        self.analytics.record_game_start()
     
     def get_current_level(self):
         if self.state['current_level'] < len(LEVELS):
@@ -129,11 +134,13 @@ class GameEngine:
             'status': self.cmd_status,
             'lore': self.cmd_lore,
             'secret': self.cmd_secret,
+            'hof': self.cmd_hall_of_fame,
+            'name': lambda a: self.cmd_set_name(a),
             'clear': self.cmd_clear
         }
         
         if action in commands:
-            if action in ['use', 'go']:
+            if action in ['use', 'go', 'name']:
                 return commands[action](args)
             return commands[action]()
         
@@ -151,6 +158,8 @@ class GameEngine:
 [color=00FFFF]lore[/color]       - Read sector backstory
 [color=00FFFF]secret[/color]     - Hidden knowledge
 [color=00FFFF]status[/color]     - Show progress
+[color=00FFFF]hof[/color]        - Hall of Fame
+[color=00FFFF]name[/color]       - Set player name
 [color=00FFFF]quit[/color]       - Exit system
 
 [b]HINT:[/b] Some commands are not what they seem."""
@@ -242,12 +251,45 @@ class GameEngine:
             return f"[WHISPER] {level['secret']}"
         return "The Veil keeps its secrets."
     
+    def cmd_hall_of_fame(self):
+        """Display Hall of Fame"""
+        hof = self.analytics.get_hall_of_fame()
+        if not hof:
+            return "[HALL OF FAME]\nNo completions yet. Be the first!"
+        
+        result = "[HALL OF FAME - TOP VEIL BREAKERS]\n"
+        result += "Rank | Player | Attempts | Date\n"
+        result += "-" * 45 + "\n"
+        
+        for i, entry in enumerate(hof, 1):
+            date = entry['date'][:10]  # Just the date part
+            result += f"{i:4} | {entry['player'][:15]:15} | {entry['attempts']:8} | {date}\n"
+        
+        stats = self.analytics.get_stats()
+        result += f"\n[STATISTICS]\n"
+        result += f"Total Plays: {stats['total_plays']}\n"
+        result += f"Completions: {stats['completions']}\n"
+        result += f"Completion Rate: {stats['completion_rate']}%\n"
+        
+        return result
+    
+    def cmd_set_name(self, args):
+        """Set player name for Hall of Fame"""
+        if not args:
+            return f"Current name: {self.state.get('player_name', 'Anonymous')}\nUsage: name [your-name]"
+        
+        name = ' '.join(args)[:20]  # Limit name length
+        self.state['player_name'] = name
+        return f"Player name set to: {name}"
+    
     def cmd_status(self):
         lvl = self.state['current_level'] + 1
         total = len(LEVELS)
         diff = get_difficulty_display(self.state['current_level'])
         inv_count = len(self.state['inventory'])
-        return f"Sector {lvl}/{total} {diff} | Inventory: {inv_count}"
+        player = self.state.get('player_name', 'Anonymous')
+        total_attempts = sum(self.state['attempts_count'].values())
+        return f"Player: {player} | Sector {lvl}/{total} {diff} | Inventory: {inv_count} | Total Attempts: {total_attempts}"
     
     def cmd_clear(self):
         return "__CLEAR__"
@@ -416,16 +458,30 @@ class GameEngine:
             self.state['game_complete'] = True
             if not self.state['first_success']:
                 self.state['first_success'] = datetime.now().isoformat()
-            return """[CRITICAL] ALL SECTORS BREACHED
+            
+            # Record in Hall of Fame
+            total_attempts = sum(self.state['attempts_count'].values())
+            self.analytics.record_completion(
+                self.state.get('player_name', 'Anonymous'),
+                total_attempts
+            )
+            
+            # Get Hall of Fame
+            hof = self.analytics.get_hall_of_fame()
+            hof_text = "\n[HALL OF FAME]\n"
+            for i, entry in enumerate(hof[:5], 1):
+                hof_text += f"{i}. {entry['player']} - {entry['attempts']} attempts\n"
+            
+            return f"""[CRITICAL] ALL SECTORS BREACHED
 
 The Veil has been lifted.
 Reality is code.
 You are among the elite few who have conquered The Alpha-Omega Protocol.
 
 [ACHIEVEMENT UNLOCKED: VEIL_BREAKER]
-[ATTEMPTS: {attempts}]
-
-Type 'status' to see your glory.""".format(attempts=sum(self.state['attempts_count'].values()))
+[ATTEMPTS: {total_attempts}]
+{hof_text}
+Type 'status' to see your glory."""
         
         level = self.get_current_level()
         level_num = self.state['current_level'] + 1
