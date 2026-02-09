@@ -186,29 +186,34 @@ class GameEngine:
     def cmd_clear(self):
         return "__CLEAR__"
     
-    def process_scan_result(self, result):
-        """Process what was detected and add to inventory"""
+    def process_scan_result(self, result, add_to_inventory=False):
+        """Process what was detected. Only add to inventory on successful scans."""
         text_parts = []
         
         if result.get('type') == 'qr':
             text_parts.append(f"QR Data: {result['data']}")
-            self.state['inventory'].append(f"QR:{result['data']}")
+            if add_to_inventory:
+                self.state['inventory'].append(f"QR:{result['data']}")
         elif result.get('type') == 'color':
             color = result.get('color', 'unknown')
             text_parts.append(f"Color signature: {color.upper()}")
-            self.state['inventory'].append(f"Color:{color}")
+            if add_to_inventory:
+                self.state['inventory'].append(f"Color:{color}")
         elif result.get('type') == 'shape':
             shape = result.get('shape', 'unknown')
             text_parts.append(f"Object analyzed: {shape.upper()} form detected")
-            self.state['inventory'].append(f"Shape:{shape}")
+            if add_to_inventory:
+                self.state['inventory'].append(f"Shape:{shape}")
         elif result.get('type') == 'barcode':
             text_parts.append(f"Barcode Data: {result['data']}")
-            self.state['inventory'].append(f"Barcode:{result['data']}")
+            if add_to_inventory:
+                self.state['inventory'].append(f"Barcode:{result['data']}")
         else:
             text_parts.append("Unknown or unclear signature")
         
         # Remove duplicates from inventory
-        self.state['inventory'] = list(set(self.state['inventory']))
+        if add_to_inventory:
+            self.state['inventory'] = list(set(self.state['inventory']))
         return " | ".join(text_parts)
     
     def check_puzzle_solution(self, result):

@@ -111,11 +111,11 @@ def scan():
         if 'error' in result:
             return jsonify({'error': result['error']})
         
-        # Add to inventory
-        result_text = engine.process_scan_result(result)
-        
-        # Check if it solves the puzzle
+        # Check if it solves the puzzle FIRST
         success = engine.check_puzzle_solution(result)
+        
+        # Only add to inventory on successful scans
+        result_text = engine.process_scan_result(result, add_to_inventory=success)
         
         if success:
             advance_text = engine.advance_level()
@@ -131,8 +131,8 @@ def scan():
             level = engine.get_current_level()
             req = level.get('requirement', {}) if level else {}
             
-            # Build specific feedback message
-            feedback_parts = ['Item archived.']
+            # Build specific feedback message - item NOT archived on failure
+            feedback_parts = ['Analysis complete.']
             
             if req.get('any'):
                 feedback_parts.append('Calibration incomplete - scan again.')
@@ -193,9 +193,9 @@ def upload():
         if 'error' in result:
             return jsonify({'error': result['error']})
         
-        # Process result same as scan
-        result_text = engine.process_scan_result(result)
+        # Check puzzle solution first, then add to inventory only if successful
         success = engine.check_puzzle_solution(result)
+        result_text = engine.process_scan_result(result, add_to_inventory=success)
         
         if success:
             advance_text = engine.advance_level()
@@ -210,7 +210,7 @@ def upload():
             level = engine.get_current_level()
             req = level.get('requirement', {}) if level else {}
             
-            feedback_parts = ['Item archived.']
+            feedback_parts = ['Analysis complete.']
             if req.get('any'):
                 feedback_parts.append('Calibration incomplete - scan again.')
             elif req.get('randomized'):

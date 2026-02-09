@@ -375,7 +375,7 @@
                             }
                             updateStatus(data.level, null);
                         } else {
-                            addLine('Item archived. Lock remains engaged.');
+                            addLine(data.hint || 'Lock remains engaged.');
                         }
                     }
                 } catch (err) {
