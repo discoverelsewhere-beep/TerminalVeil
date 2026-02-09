@@ -1,81 +1,114 @@
-# Terminal Veil
+# Terminal Veil v2.0
 
-Mixed-reality puzzle adventure game. Scan real-world objects (colors, shapes, QR codes) to solve puzzles and progress through 8 sectors.
+**The hardest mixed-reality puzzle game ever created.**
+
+Scan real-world objects (colors, shapes, QR codes, barcodes) to solve 13 increasingly difficult puzzles. Only 1% of players will complete The Alpha-Omega Protocol.
 
 ![Terminal Veil Icon](resources/icon.png)
 
-## Screenshots
+## 🎮 Play Now
 
-*Coming soon - see [docs/SCREENSHOTS_GUIDE.md](docs/SCREENSHOTS_GUIDE.md) for capture instructions*
+**Web:** https://terminalveilproject.onrender.com
 
-<!-- Uncomment when screenshots are ready:
-![Desktop Interface](screenshots/desktop_main.png)
-![Mobile Scanning](screenshots/mobile_scanning.png)
--->
+**itch.io:** https://anointedchaos.itch.io/terminal-veil
 
-## Quick Start
+## 🏆 Features
 
-### Web Edition (Recommended)
-Works on iPhone, Android, and Desktop:
+- **13 Sectors** of progressive difficulty
+- **Hall of Fame** - Compete for fewest attempts
+- **Analytics** - Track completion rates
+- **Easter Eggs** - Hidden secrets throughout
+- **File Upload** - Play without camera
+- **Extreme Difficulty** - Levels 10-12 are brutally hard
+
+## 📊 The 13 Sectors
+
+### Tutorial (Easy)
+1. **Calibration** - Scan anything
+2. **Crimson Gate** - Find RED
+3. **Encoded Transmission** - QR: "VEIL-42"
+
+### Medium
+4. **Geometric Lock** - Show CIRCLE
+5. **Dual Authentication** - BLUE + QR "END"
+6. **Commercial District** - Any barcode
+7. **Triangular Paradox** - Show TRIANGLE
+
+### Hard
+8. **The Final Veil** - Random requirement
+9. **The Chromatic Cascade** - Find GREEN
+10. **The Data Convergence** - QR "SYNC-9" + YELLOW
+
+### EXTREME (Legendary Difficulty)
+11. **The Geometric Ascension** - Scan 3 shapes in ORDER (Triangle→Square→Circle). One mistake = RESET
+12. **The Synaptic Firewall** - SIMULTANEOUS: Barcode + RED in ONE frame
+13. **The Alpha-Omega Protocol** - 4-part ritual: QR "ALPHA"→YELLOW→TRIANGLE→QR "OMEGA". One error = TOTAL RESET
+
+## 🎯 Commands
+
+- `help` - Show commands
+- `hint` - Get puzzle hint
+- `lore` - Read backstory
+- `secret` - Hidden knowledge
+- `status` - Show progress
+- `hof` - Hall of Fame
+- `name [your-name]` - Set player name
+- `save` / `load` - Save progress
+
+## 🚀 Quick Start (Local)
 
 ```bash
 cd ~/TerminalVeil
-pip install flask opencv-python pyzbar numpy pillow
+pip install -r requirements.txt
 python app.py
 ```
 
-Then open `http://YOUR_IP:5000` on any device.
+Open `http://localhost:5494`
 
-### iOS Native Build
-Requires macOS with Xcode:
+## 📱 QR Codes Needed
 
-```bash
-# Clean and rebuild
-cd ~/TerminalVeil
-rm -rf build/
-briefcase create ios
-briefcase build ios
-briefcase run ios
+See [docs/QR_CODES.md](docs/QR_CODES.md) for all QR codes.
+
+Quick links:
+- [VEIL-42](https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=VEIL-42)
+- [END](https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=END)
+- [ALPHA](https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=ALPHA)
+- [OMEGA](https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=OMEGA)
+
+## 🏅 Hall of Fame
+
+Complete all 13 sectors to enter the Hall of Fame. Lower attempts = higher rank.
+
+**Current Stats:**
+- Total Plays: [Check in-game with `hof` command]
+- Completion Rate: ~1%
+
+## 📦 Project Structure
+
+```
+TerminalVeil/
+├── app_sync.py          # Flask server
+├── terminalveil/        # Game package
+│   ├── terminal.py      # Game engine
+│   ├── puzzles.py       # 13 level definitions
+│   ├── camera_handler.py # Computer vision
+│   ├── analytics.py     # Stats & Hall of Fame
+│   └── save_manager.py  # Save/load
+├── templates/
+│   └── index.html       # Web UI
+└── docs/
+    ├── QR_CODES.md      # All QR codes
+    └── SCREENSHOTS_GUIDE.md
 ```
 
-Note: iOS build uses simplified camera processing (no OpenCV/pyzbar).
+## 🔒 Privacy
 
-## Project Structure
+See [PRIVACY_POLICY.md](PRIVACY_POLICY.md). We collect minimal data - just game analytics.
 
-- `app.py` - Flask web server (works everywhere)
-- `terminalveil/` - Game package
-  - `terminal.py` - Game engine
-  - `puzzles.py` - Level definitions (8 sectors)
-  - `camera_handler.py` - Full OpenCV/pyzbar version
-  - `ios_camera_handler.py` - iOS-compatible version
-  - `save_manager.py` - Save/load system
-- `templates/index.html` - Web UI
-- `pyproject.toml` - Briefcase config for iOS
-- `PRIVACY_POLICY.md` - Privacy policy for mobile apps
+## 📄 License
 
-## Game Progression
+MIT License - see [LICENSE](LICENSE)
 
-1. **Calibration** - Scan anything
-2. **Crimson Gate** - Find red object
-3. **Encoded Transmission** - Scan QR with "VEIL-42"
-4. **Geometric Lock** - Show circle
-5. **Dual Authentication** - Blue + QR with "END"
-6. **Commercial District** - Scan barcode
-7. **Triangular Paradox** - Show triangle
-8. **Final Veil** - Match random signature
+---
 
-## Publishing
-
-### itch.io
-See [itchio/itchio_page.md](itchio/itchio_page.md) for page content and [itchio/index.html](itchio/index.html) for a standalone promo page.
-
-### Screenshots & Demo
-See [docs/SCREENSHOTS_GUIDE.md](docs/SCREENSHOTS_GUIDE.md) for detailed instructions on capturing screenshots and creating demo GIFs.
-
-## Privacy
-
-See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for details on data collection (spoiler: we collect almost nothing).
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
+**Can you break The Veil?** 🎮
