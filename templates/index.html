@@ -254,6 +254,12 @@
             🖼️ PHOTO LIBRARY
         </label>
         
+        <label class="scan-btn" style="background: rgba(0, 100, 255, 0.2); border-color: #00f;">
+            <input type="file" id="file-upload" accept="image/*" onchange="handleFileUpload(event)">
+            📁 UPLOAD FILE
+        </label>
+        <div style="color: #888; font-size: 12px; margin: -10px 0 10px 0;">For desktop users without camera</div>
+        
         <button class="cancel-btn" onclick="hideCamera()">ABORT SCAN</button>
     </div>
 
@@ -377,6 +383,46 @@
                 }
             };
             reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+        
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            addLine('[UPLOADING FILE...]');
+            hideCamera();
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('mode', 'any');
+            
+            try {
+                const res = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (data.error) {
+                    addLine('UPLOAD FAILED: ' + data.error);
+                } else {
+                    addLine('[ANALYSIS RESULT] ' + data.result);
+                    if (data.success) {
+                        addLine('');
+                        addLine('>>> ACCESS GRANTED <<<');
+                        if (data.advance) {
+                            data.advance.split('\n').forEach(line => addLine(line));
+                        }
+                        updateStatus(data.level, null);
+                    } else {
+                        addLine(data.hint || 'Item archived. Lock remains engaged.');
+                    }
+                }
+            } catch (err) {
+                addLine('ERROR: ' + err.message);
+            }
+            
             event.target.value = '';
         }
         
