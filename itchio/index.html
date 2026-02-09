@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal Veil - Play on itch.io</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            font-size: 3em;
+            text-shadow: 0 0 20px #0f0;
+            margin-bottom: 10px;
+        }
+        .tagline {
+            color: #0a0;
+            margin-bottom: 30px;
+        }
+        .play-button {
+            display: inline-block;
+            background: #0f0;
+            color: #000;
+            padding: 20px 60px;
+            font-size: 1.5em;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            transition: all 0.3s;
+        }
+        .play-button:hover {
+            box-shadow: 0 0 30px #0f0;
+            transform: scale(1.05);
+        }
+        .features {
+            margin: 40px 0;
+            text-align: left;
+        }
+        .features h2 {
+            border-bottom: 2px solid #0f0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .features ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+        .features li {
+            margin: 10px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .features li:before {
+            content: ">";
+            position: absolute;
+            left: 0;
+            color: #0f0;
+        }
+        .screenshots {
+            margin: 40px 0;
+        }
+        .screenshots img {
+            max-width: 100%;
+            border: 2px solid #0f0;
+            margin: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        .instructions {
+            background: rgba(0, 255, 0, 0.05);
+            border: 1px solid #0f0;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: left;
+        }
+        .instructions h3 {
+            margin-bottom: 15px;
+        }
+        .scan-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .scan-item {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #0f0;
+            padding: 15px;
+            text-align: center;
+        }
+        .scan-item .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        footer {
+            margin-top: 50px;
+            color: #0a0;
+            font-size: 0.9em;
+        }
+        .privacy-link {
+            color: #0f0;
+            text-decoration: none;
+        }
+        .privacy-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TERMINAL VEIL</h1>
+        <p class="tagline">Mixed-reality puzzle adventure</p>
+        
+        <a href="YOUR_GAME_URL_HERE" class="play-button">PLAY NOW</a>
+        
+        <p style="margin-top: 20px; color: #0a0;">
+            📱 Works on iPhone, Android, and Desktop<br>
+            🎮 No download required - play in browser
+        </p>
+
+        <div class="instructions">
+            <h3>HOW TO PLAY</h3>
+            <p>1. Click PLAY NOW to launch the terminal</p>
+            <p>2. Type commands or tap SCAN to activate camera</p>
+            <p>3. Scan real-world objects to solve puzzles:</p>
+            
+            <div class="scan-grid">
+                <div class="scan-item">
+                    <div class="icon">🔴</div>
+                    <div>Red Objects</div>
+                </div>
+                <div class="scan-item">
+                    <div class="icon">🔵</div>
+                    <div>Blue Objects</div>
+                </div>
+                <div class="scan-item">
+                    <div class="icon">⬜</div>
+                    <div>QR Codes</div>
+                </div>
+                <div class="scan-item">
+                    <div class="icon">⭕</div>
+                    <div>Circles</div>
+                </div>
+                <div class="scan-item">
+                    <div class="icon">🔺</div>
+                    <div>Triangles</div>
+                </div>
+                <div class="scan-item">
+                    <div class="icon">📊</div>
+                    <div>Barcodes</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="features">
+            <h2>FEATURES</h2>
+            <ul>
+                <li>8 unique puzzle sectors to hack through</li>
+                <li>Real-time camera scanning technology</li>
+                <li>Cyberpunk terminal aesthetic with authentic retro feel</li>
+                <li>Save your progress and resume anytime</li>
+                <li>No ads, no tracking, no data collection</li>
+                <li>Free to play</li>
+            </ul>
+        </div>
+
+        <div class="screenshots">
+            <h2>SCREENSHOTS</h2>
+            <p style="color: #0a0; margin-bottom: 20px;">Add screenshots here when ready</p>
+            <!-- 
+            <img src="screenshot1.png" alt="Terminal Interface">
+            <img src="screenshot2.png" alt="Camera Scanning">
+            -->
+        </div>
+
+        <footer>
+            <p>Made by Joshua Fischl | <a href="../PRIVACY_POLICY.md" class="privacy-link">Privacy Policy</a></p>
+            <p style="margin-top: 10px; font-size: 0.8em;">Built with Python, Flask, and OpenCV</p>
+        </footer>
+    </div>
+</body>
+</html>

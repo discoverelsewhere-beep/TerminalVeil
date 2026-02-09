@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Terminal Veil</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: fixed;
+            touch-action: manipulation;
+        }
+
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        #header {
+            text-align: center;
+            padding: 10px;
+            border-bottom: 2px solid #0f0;
+            font-size: 16px;
+            text-shadow: 0 0 10px #0f0;
+            background: #001;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+        }
+        
+        #terminal {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 10px;
+            font-size: 14px;
+            line-height: 1.4;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 20, 0, 0.15),
+                rgba(0, 20, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 3px
+            );
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            -webkit-overflow-scrolling: touch;
+            position: relative;
+        }
+        
+        .line {
+            margin: 2px 0;
+            word-break: break-word;
+        }
+        
+        #status-bar {
+            padding: 8px 10px;
+            border-top: 1px solid #030;
+            font-size: 12px;
+            color: #0a0;
+            background: #000;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+        }
+        
+        #input-area {
+            display: flex;
+            padding: 8px;
+            gap: 5px;
+            border-top: 2px solid #0f0;
+            background: #001;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+        }
+        
+        #command-input {
+            flex: 1;
+            background: #000;
+            border: 2px solid #0f0;
+            color: #0f0;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 16px;
+            outline: none;
+            border-radius: 5px;
+            min-width: 0;
+        }
+        
+        #command-input:focus {
+            background: #020;
+            box-shadow: 0 0 15px #0f0;
+        }
+        
+        .btn {
+            background: #020;
+            border: 2px solid #0f0;
+            color: #0f0;
+            padding: 12px 15px;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            touch-action: manipulation;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn:active {
+            background: #0f0;
+            color: #000;
+        }
+        
+        #camera-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 9999;
+            padding: 20px;
+            padding-top: 60px;
+            padding-top: max(60px, env(safe-area-inset-top));
+            padding-bottom: env(safe-area-inset-bottom);
+            overflow-y: auto;
+        }
+        
+        .modal-title {
+            text-align: center;
+            font-size: 20px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #0f0;
+        }
+        
+        .modal-subtitle {
+            text-align: center;
+            color: #0a0;
+            margin-bottom: 30px;
+        }
+        
+        .scan-btn {
+            display: block;
+            width: 100%;
+            background: #020;
+            border: 3px solid #0f0;
+            color: #0f0;
+            padding: 25px;
+            margin: 15px 0;
+            font-size: 18px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            font-family: inherit;
+            touch-action: manipulation;
+        }
+        
+        .scan-btn input {
+            display: none;
+        }
+        
+        .scan-btn:active {
+            background: #0f0;
+            color: #000;
+        }
+        
+        .cancel-btn {
+            display: block;
+            width: 100%;
+            background: #300;
+            border: 3px solid #f00;
+            color: #f00;
+            padding: 20px;
+            margin-top: 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        ::-webkit-scrollbar { 
+            width: 8px; 
+        }
+        
+        ::-webkit-scrollbar-track { 
+            background: #001; 
+        }
+        
+        ::-webkit-scrollbar-thumb { 
+            background: #0f0; 
+            border-radius: 5px; 
+        }
+        
+        @supports (-webkit-touch-callout: none) {
+            #terminal {
+                font-size: 15px;
+            }
+            .btn {
+                font-size: 16px;
+                padding: 15px 20px;
+            }
+            .scan-btn {
+                font-size: 20px;
+                padding: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="header">TERMINAL VEIL v2.0 // SECURE CONNECTION</div>
+    
+    <div id="terminal"></div>
+    
+    <div id="status-bar">SYSTEM READY | SECTOR: 1/8</div>
+    
+    <div id="input-area">
+        <span style="color: #0f0; font-weight: bold; padding: 12px 5px; font-size: 18px;">></span>
+        <input type="text" id="command-input" placeholder="Type command..." autocomplete="off" autocorrect="off" autocapitalize="off">
+        <button class="btn" onclick="sendCommand()">SEND</button>
+        <button class="btn" onclick="showCamera()">SCAN</button>
+    </div>
+    
+    <div id="camera-modal">
+        <div class="modal-title">📷 NEURAL LINK ACTIVE</div>
+        <div class="modal-subtitle">Select image source to analyze reality</div>
+        
+        <label class="scan-btn">
+            <input type="file" accept="image/*" capture="environment" onchange="handleImage(event)">
+            📷 TAKE PHOTO
+        </label>
+        
+        <label class="scan-btn">
+            <input type="file" accept="image/*" onchange="handleImage(event)">
+            🖼️ PHOTO LIBRARY
+        </label>
+        
+        <button class="cancel-btn" onclick="hideCamera()">ABORT SCAN</button>
+    </div>
+
+    <script>
+        let history = [], historyIndex = -1;
+        const terminal = document.getElementById('terminal');
+        const input = document.getElementById('command-input');
+        
+        window.onload = () => {
+            addLine('TERMINAL VEIL v2.0 // WEB EDITION');
+            addLine('');
+            addLine('Initializing neural interface...');
+            addLine('Camera subsystem: STANDBY');
+            addLine('Database: CONNECTED');
+            addLine('');
+            addLine('Type "help" or tap SCAN to begin');
+            addLine('');
+            input.focus();
+        };
+        
+        function addLine(text) {
+            const div = document.createElement('div');
+            div.className = 'line';
+            // Use innerHTML for HTML-formatted text, textContent for plain text
+            if (text.includes('<')) {
+                div.innerHTML = text;
+            } else {
+                div.textContent = text;
+            }
+            terminal.appendChild(div);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+        
+        async function sendCommand() {
+            const cmd = input.value.trim();
+            if (!cmd) return;
+            
+            addLine('> ' + cmd);
+            input.value = '';
+            
+            if (!history.includes(cmd)) history.unshift(cmd);
+            historyIndex = -1;
+            
+            if (cmd.toLowerCase().startsWith('scan')) {
+                showCamera();
+                return;
+            }
+            
+            try {
+                const res = await fetch('/command', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({command: cmd})
+                });
+                const data = await res.json();
+                
+                if (data.response) {
+                    data.response.split('\n').forEach(line => {
+                        // Convert Kivy markup to HTML for display
+                        const formatted = line
+                            .replace(/\[b\](.*?)\[\/b\]/g, '<strong style="color:#0f0;">$1</strong>')
+                            .replace(/\[color=00FFFF\](.*?)\[\/color\]/g, '<span style="color:#0ff;">$1</span>')
+                            .replace(/\[color=([0-9A-Fa-f]{6})\](.*?)\[\/color\]/g, '<span style="color:#$1;">$2</span>');
+                        addLine(formatted);
+                    });
+                }
+                if (data.victory) {
+                    addLine('');
+                    addLine('*** SYSTEM BREACH SUCCESSFUL ***');
+                    addLine('The Veil has been lifted.');
+                    addLine('Reality is code.');
+                }
+                updateStatus(data.level, data.inventory);
+            } catch (e) {
+                addLine('ERROR: ' + e.message);
+            }
+        }
+        
+        function showCamera() {
+            document.getElementById('camera-modal').style.display = 'block';
+        }
+        
+        function hideCamera() {
+            document.getElementById('camera-modal').style.display = 'none';
+        }
+        
+        function handleImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            addLine('[PROCESSING IMAGE...]');
+            hideCamera();
+            
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const res = await fetch('/scan', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({image: e.target.result, mode: 'any'})
+                    });
+                    const data = await res.json();
+                    
+                    if (data.error) {
+                        addLine('SCAN FAILED: ' + data.error);
+                    } else {
+                        addLine('[SCAN RESULT] ' + data.result);
+                        if (data.success) {
+                            addLine('');
+                            addLine('>>> ACCESS GRANTED <<<');
+                            if (data.advance) {
+                                data.advance.split('\n').forEach(line => addLine(line));
+                            }
+                            updateStatus(data.level, null);
+                        } else {
+                            addLine('Item archived. Lock remains engaged.');
+                        }
+                    }
+                } catch (err) {
+                    addLine('ERROR: ' + err.message);
+                }
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+        
+        function updateStatus(lvl, inv) {
+            let txt = `SECTOR: ${lvl}/8`;
+            if (inv !== null) txt += ` | INVENTORY: ${inv} items`;
+            document.getElementById('status-bar').textContent = txt;
+        }
+        
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendCommand();
+        });
+        
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (historyIndex < history.length - 1) {
+                    historyIndex++;
+                    input.value = history[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    input.value = history[historyIndex];
+                } else {
+                    historyIndex = -1;
+                    input.value = '';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

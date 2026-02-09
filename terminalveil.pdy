@@ -1,0 +1,14 @@
+{
+    "name": "TerminalVeil",
+    "qmake": "/Users/YOUR_USERNAME/Qt/6.5.0/ios/bin/qmake",
+    "device": "ios",
+    "python": "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3.11",
+    "sources": [
+        "main.py",
+        "terminal.py",
+        "camera_handler.py",
+        "puzzles.py",
+        "save_manager.py"
+    ],
+    "target": "ios_build"
+}

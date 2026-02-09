@@ -1,0 +1,21 @@
+[build-system]
+requires = ["briefcase"]
+
+[tool.briefcase]
+project_name = "Terminal Veil"
+bundle = "com.terminalveil"
+version = "1.0.0"
+url = "https://terminalveil.app"
+license = {file = "LICENSE"}
+author = "Joshua Fischl"
+
+[tool.briefcase.app.terminalveil]
+formal_name = "Terminal Veil"
+description = "Mixed-reality puzzle adventure"
+icon = "resources/icon"
+sources = ["terminalveil"]
+requires = ["numpy", "pillow"]
+
+[tool.briefcase.app.terminalveil.iOS]
+supported = true
+requires = ["numpy", "pillow"]
