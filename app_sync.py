@@ -104,7 +104,8 @@ def scan():
                 'success': True,
                 'result': result_text,
                 'advance': advance_text,
-                'level': engine.state['current_level'] + 1
+                'level': engine.state['current_level'] + 1,
+                'total_levels': 13
             })
         else:
             return jsonify({

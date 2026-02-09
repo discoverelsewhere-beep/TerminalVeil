@@ -231,7 +231,7 @@
     
     <div id="terminal"></div>
     
-    <div id="status-bar">SYSTEM READY | SECTOR: 1/8</div>
+    <div id="status-bar">SYSTEM READY | SECTOR: 1/13</div>
     
     <div id="input-area">
         <span style="color: #0f0; font-weight: bold; padding: 12px 5px; font-size: 18px;">></span>
@@ -381,7 +381,7 @@
         }
         
         function updateStatus(lvl, inv) {
-            let txt = `SECTOR: ${lvl}/8`;
+            let txt = `SECTOR: ${lvl}/13`;
             if (inv !== null) txt += ` | INVENTORY: ${inv} items`;
             document.getElementById('status-bar').textContent = txt;
         }

@@ -3,7 +3,7 @@ Terminal Veil - Game Engine
 Handles state, progression, inventory, and command parsing.
 """
 import random
-from terminalveil.puzzles import LEVELS
+from terminalveil.puzzles import LEVELS, get_level_difficulty, get_accessibility_hint
 from terminalveil.save_manager import SaveManager
 
 class GameEngine:
@@ -46,6 +46,12 @@ class GameEngine:
         desc += f"\nInventory: {', '.join(self.state['inventory']) if self.state['inventory'] else '[empty]'}"
         return desc
     
+    def cmd_lore(self):
+        level = self.get_current_level()
+        if level and 'lore' in level:
+            return f"[ARCHIVE ENTRY]\n{level['lore']}"
+        return "No archive data available for this sector."
+    
     def process_command(self, cmd):
         parts = cmd.lower().strip().split()
         if not parts:
@@ -67,6 +73,7 @@ class GameEngine:
             'quit': self.cmd_quit,
             'hint': self.cmd_hint,
             'status': self.cmd_status,
+            'lore': self.cmd_lore,
             'clear': self.cmd_clear
         }
         
@@ -78,7 +85,7 @@ class GameEngine:
         return f"Unknown command: '{action}'. Type 'help' for available commands."
     
     def cmd_help(self):
-        return "[b]SYSTEM COMMANDS[/b]\n[color=00FFFF]help[/color]       - Show this list\n[color=00FFFF]look[/color]       - Examine current sector\n[color=00FFFF]inventory[/color]  - List collected items\n[color=00FFFF]scan[/color]       - Activate camera\n[color=00FFFF]save[/color]       - Save progress\n[color=00FFFF]load[/color]       - Load progress\n[color=00FFFF]hint[/color]       - Get puzzle clue\n[color=00FFFF]quit[/color]       - Exit system"
+        return "[b]SYSTEM COMMANDS[/b]\n[color=00FFFF]help[/color]       - Show this list\n[color=00FFFF]look[/color]       - Examine current sector\n[color=00FFFF]inventory[/color]  - List collected items\n[color=00FFFF]scan[/color]       - Activate camera\n[color=00FFFF]save[/color]       - Save progress\n[color=00FFFF]load[/color]       - Load progress\n[color=00FFFF]hint[/color]       - Get puzzle clue\n[color=00FFFF]lore[/color]       - Read sector backstory\n[color=00FFFF]status[/color]     - Show progress\n[color=00FFFF]quit[/color]       - Exit system"
     
     def cmd_look(self):
         return self.get_current_description()
@@ -125,7 +132,17 @@ class GameEngine:
     
     def cmd_status(self):
         lvl = self.state['current_level'] + 1
-        return f"Sector {lvl}/8 | Inventory: {len(self.state['inventory'])} items"
+        total = len(LEVELS)
+        difficulty = get_level_difficulty(self.state['current_level'])
+        diff_display = {
+            'tutorial': '[TRAINING]',
+            'easy': '[EASY]',
+            'medium': '[MEDIUM]', 
+            'hard': '[HARD]',
+            'very_hard': '[VERY HARD]',
+            'extreme': '[EXTREME]'
+        }.get(difficulty, '[NORMAL]')
+        return f"Sector {lvl}/{total} {diff_display} | Inventory: {len(self.state['inventory'])} items"
     
     def cmd_clear(self):
         return "__CLEAR__"
