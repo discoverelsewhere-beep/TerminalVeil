@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: terminal-veil
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
